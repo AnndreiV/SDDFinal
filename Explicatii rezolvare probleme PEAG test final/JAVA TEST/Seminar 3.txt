@@ -1,0 +1,65 @@
+ex1.
+
+declare
+v_salariul angajati.salariul%type;
+nr_comenzi number;
+v_id_angajat angajati.id_angajat%type := &id;
+v_nume angajati.nume%type;
+begin
+select salariul, nume into v_salariul, v_nume from angajati where id_angajat = v_id_angajat;
+dbms_output.put_line('Salariul angajatului '||v_id_angajat||', cu numele '||v_nume||', este '||v_salariul);
+select count(id_angajat) into nr_comenzi from comenzi where id_angajat = v_id_angajat;
+dbms_output.put_line('Angajatul '||v_nume||' a intermediat '||nr_comenzi||' comenzi');
+if nr_comenzi between 4 and 8 then
+    v_salariul := v_salariul * 1.1;
+elsif nr_comenzi > 8 then
+    v_salariul := v_salariul* 1.2;
+end if;
+update angajati set salariul = v_salariul where id_angajat = v_id_angajat;
+dbms_output.put_line('Noul salariu al angajatului '||v_nume||' este '||v_salariul);
+end;
+
+ex2.
+
+-- Intr-un bloc SQL parcurgeti toti angajatii de la 100 la 110 afisandu-le numele si salariul folosind structurile repetitive
+
+-- LOOP...END LOOP
+declare
+    v_id angajati.id_angajat%type := 100;
+    v_nume angajati.nume%type;
+    v_salariul angajati.salariul%type;
+begin
+    /*loop
+        select nume, salariul into v_nume, v_salariul from angajati where id_angajat = v_id;
+        dbms_output.put_line('Angajatul cu id-ul '||v_id||', cu numele '||v_nume||', are salariul '||v_salariul);
+        v_id := v_id+1;
+        exit when v_id > 110;
+    end loop;
+    v_id := 100;
+    while v_id < 111 loop
+    select nume, salariul into v_nume, v_salariul from angajati where id_angajat = v_id;
+        dbms_output.put_line('Angajatul cu id-ul '||v_id||', cu numele '||v_nume||', are salariul '||v_salariul);
+        v_id := v_id+1;
+    end loop;*/
+    for i in 100..110 loop
+    select nume, salariul into v_nume, v_salariul from angajati where id_angajat = v_id;
+        dbms_output.put_line('Angajatul cu id-ul '||v_id||', cu numele '||v_nume||', are salariul '||v_salariul);
+    end loop;
+end;
+
+/* afisati toti angajatii (nume, salariul folosind o structura for */
+
+declare
+v_nume angajati.nume%type;
+v_salariul angajati.salariul%type;
+v_idmin angajati.id_angajat%type;
+v_idmax angajati.id_angajat%type;
+begin
+    select min(id_angajat), max(id_angajat) into v_idmin, v_idmax from angajati;
+    for v_id in v_idmin..v_idmax loop
+    select nume, salariul into v_nume, v_salariul from angajati where id_angajat = v_id;
+    dbms_output.put_line(v_id||':'||v_nume||' are salariul '||v_salariul);
+    end loop;
+end;
+
+delete from angajati where id_angajat=102;

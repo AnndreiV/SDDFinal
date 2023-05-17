@@ -1,0 +1,142 @@
+/*1. Realizati un bloc PL/SQL pentru a afisa data de incepere a ocuparii functiei curente a unui anumit angajat al carui ID este citit de la tastatura.
+  Daca angajatul nu a mai avut si alte functii afisati data angajarii*/
+
+
+declare
+    v_nrang number;
+    v_an number;
+    exc exception;
+begin
+    for i in 2016..2022 loop
+        select count(*) into v_nrang from angajati where extract(year from data_angajare) = i;
+        if v_nrang is not null then
+        begin
+        if v_nrang <= 3 and v_nrang > 0 then
+            dbms_output.put_line(v_nrang||' - an neproductiv');
+        elsif v_nrang > 3 then
+            dbms_output.put_line(v_nrang||' - an productiv');
+        else
+		    v_an := i;
+            raise exc;
+        end if;
+        exception
+            when exc then
+        dbms_output.put_line('In anul '||v_an||' nu s-au facut angajari.');
+        end;
+        end if;
+    end loop;
+end;
+
+/*2.Folosind un bloc Pl/SQL afișați numărul de angajați ai firmei care au fost angajați în fiecare an în intervalul 2016-2022. 
+Dacă într-un an au fost angajate maxim 3 persoane, afișați numărul și mesajul 'An neproductiv'; altfel afișați numărul împreună cu mesajul - an productiv. 
+În cazul în care într-un an nu a fost angajată nici o persoană invocați o excepție, care se va trata corespunzător (mesajul 'În anul YYYY nu s-au făcut angajări').*/
+
+declare
+    v_nrang number;
+    v_an number;
+    exc exception;
+begin
+    for i in 2016..2022 loop
+        select count(*) into v_nrang from angajati where extract(year from data_angajare) = i;
+        if v_nrang <= 3 and v_nrang > 0 then
+            dbms_output.put_line(v_nrang||' - an neproductiv');
+        elsif v_nrang > 3 then
+            dbms_output.put_line(v_nrang||' - an productiv');
+        else
+		v_an := i;
+            raise exc;
+        end if;
+    end loop;
+    exception
+    when exc then
+	dbms_output.put_line('In anul '||v_an||' nu s-au facut angajari.');
+end;
+
+
+/*3.Într-un bloc PL/SQL afişaţi informaţii despre top 3 comenzi care au cea mai mare valoare.*/
+
+declare
+    cursor c1 is select c.id_comanda, sum(rc.pret*rc.cantitate) valoare from comenzi c, rand_comenzi rc where rc.id_comanda = c.id_comanda group by c.id_comanda order by valoare desc fetch first 3 rows only;
+begin
+    for entry in c1 loop
+        dbms_output.put_line('Comanda '||entry.id_comanda||' a avut o valoare totala de '||entry.valoare||' u.m.');
+    end loop;
+end;
+
+/*4. Într-un bloc PL/SQL Afişaţi informaţii despre primii 5 agenţi angajaţi în firmă (se va realiza filtrarea în funcţie de câmpul Data_Angajare). */
+
+declare
+    cursor c1 is select * from angajati order by data_angajare asc fetch first 5 rows only;
+begin
+    for entry in c1 loop
+        dbms_output.put_line('Angajatul '||entry.nume||' '||entry.prenume||' a fost angajat in data de '||entry.data_angajare);
+    end loop;
+end;
+
+/*5. Intr-un bloc Pl/SQL afisati numele unui angajat, al carui id este citit de la tastatura. 
+De asemenea, calculați numarul de comenzi gestionate de catre angajatul respectiv. 
+Afisati numele angajatului , iar daca acesta exista și s-a ocupat de comenzi, afișați numarul acestora. 
+Dacă angajatul nu există, tratați excepția cu o rutină de tratare corespunzătoare, iar dacă angajatul nu s-a ocupat de nici o comandă, invocați o excepție, care se va trata corespunzător. 
+Tratați orice altă excepție cu o rutină de tratare corespunzătoare.*/
+declare
+    v_id angajati.id_angajat%type := &id;
+    v_nume angajati.nume%type;
+    v_nrc pls_integer;
+    no_orders exception;
+begin
+    
+    begin
+    select nume into v_nume from angajati where id_angajat = v_id;
+    end;
+    
+    if v_nume is not null then
+        begin
+            select count(id_angajat) into v_nrc from comenzi where id_angajat = v_id;
+            if v_nrc = 0 then
+                raise no_orders;
+            end if;
+        end;
+    end if;
+    
+    dbms_output.put_line('Angajatul '||v_id||' a intermediat '||v_nrc||' comenzi.'); 
+    
+    exception
+        when no_orders then
+            dbms_output.put_line('Angajatul '||v_id||' nu a intermediat comenzi.');
+        when no_data_found then
+            dbms_output.put_line('Nu exista angajat cu id-ul '||v_id||'.');
+	  when others then
+		dbms_output.put_line('Eroare! > '||SQLERRM);
+end;
+
+/*6. Creaţi o tabela numita Mesaje, având un câmp unic, de tip Varchar2. În continuare, realizați un bloc PL/SQL pentru a selecta codul comenzilor încheiate într-un an citit de la tastatura.
+Dacă interogarea returnează mai mult de o valoare pentru numărul comenzii, trataţi excepţia cu o rutină de tratare corespunzătoare şi inseraţi în tabela MESAJE mesajul “Atenţie! In anul YYYY s-au încheiat mai multe comenzi!”.
+Dacă interogarea nu returnează nici o valoare pentru numărul comenzii, trataţi excepţia cu o rutină de tratare corespunzătoare şi inseraţi în tabela Mesaje mesajul “Atenţie! In anul YYYY nu s-au încheiat comenzi!”.
+Dacă se returnează o singura linie, introduceţi în tabela Mesaje numărul comenzii.
+Trataţi orice altă excepţie cu o rutină de tratare corespunzătoare şi inseraţi în tabela MESAJE mesajul “A apărut o altă eroare!”.*/
+
+declare
+    v_id_comanda comenzi.id_comanda%type;
+    v_an number := &an;
+    v_eroare varchar2;
+begin
+    execute immediate 'create table mesaje(mesaj varchar2(500);';
+    select id_comanda into v_id_comanda from comenzi where extract(year from data) = to_number(v_an);
+    insert into mesaje values v_id_comanda;
+    exception
+    when too_many_rows then
+        v_eroare := 'Atentie! In anul '||v_an||' s-au incheiat mai multe comenzi.';
+        insert into mesaje values v_eroare;
+    when no_data_found then
+        v_eroare := 'Atentie! In anul '||v_an||' nu s-au incheiat comenzi.';
+        insert into mesaje values v_eroare;
+    when others then
+        v_eroare := 'A aparut alta eroare';
+        insert into mesaje values v_eroare;
+end;
+
+/*7. Realizați un bloc PL/SQL în care să exemplificați lucrul cu excepții definite de utilizator folosind funcția RAISE_APPLICATION_ERROR()*/
+
+
+
+

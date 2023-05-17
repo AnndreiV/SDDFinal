@@ -1,0 +1,119 @@
+1. Realizati un pachet care sa contina:
+
+- o functie care returneaza numarul de comenzi încheiate de catre un client al carui id este dat ca parametru. Tratati cazul în care nu exista clientul specificat;
+
+- o procedura care foloseste functia de mai sus pentru a returna primii 3 clienti cu cele mai multe comenzi încheiate.
+
+Sa se apeleze procedura din cadrul pachetului.
+
+create or replace package comenzi_cl
+is
+function nr_comenzi(p_id number) return number;
+procedure t3_clienti;
+end comenzi_cl;
+/
+create or replace package body comenzi_cl
+as
+    function nr_comenzi(p_id number) return number
+    is
+        v_nrcom number;
+        v_cl number;
+        e1 exception;
+        begin
+            select 1 into v_cl from clienti where id_client = p_id;
+            select count(id_client) into v_nrcom from comenzi where id_client = p_id;
+            if v_nrcom = 0 then
+                raise e1;
+            else
+                return v_nrcom;
+            end if;
+            exception
+                when no_data_found then
+                    return 0;
+                when e1 then
+                    return -1;
+            end nr_comenzi;
+    procedure t3_clienti
+    is
+        cursor c1 is select id_client, nume_client, nr_comenzi(id_client) nr_de_comenzi from clienti order by nr_de_comenzi desc fetch first 3 rows only;
+    begin
+        for rec1 in c1 loop
+            dbms_output.put_line(rec1.id_client||' '||rec1.nume_client||' '||rec1.nr_de_comenzi);
+        end loop;
+    end;
+end;
+/
+begin
+    comenzi_cl.t3_clienti;
+end;
+
+2. Realizati un pachet de subprograme care sa contina:
+
+- o functie care verifică dacă un anumit id al unei functii există deja în tabela Functii si returnează True atunci când există, False când nu.
+
+- o procedura  care sa adauge o înregistrare noua în tabela Functii. Parametrii procedurii se refera la Informatiile ce trebuie adaugate). Se trateaza cazul în care exista deja o functie cu id-ul introdus, folosind funcția de verificare.
+
+- o  procedura care sa modifice denumirea unei functii. Folosim ca parametri id-ul functiei pentru care actualizam si noua denumire. Se trateaza cazul în care nu se realizeaza modificarea nu are loc din cauza faptului ca id-ul precizat nu se regaseste în tabela (folositi functia).
+
+- o procedura care sa stearga o functie pe baza id-ului primit drept parametru. Se trateaza cazul în care id-ul furnizat nu exista.
+
+Sa se apeleze subprogramele din pachet.
+
+
+create or replace package functii_pkg 
+is
+function ex_func(p_id functii.id_functie%type) return boolean;
+procedure add_func(p_id functii.id_functie%type, p_den functii.denumire_functie%type, p_sal_min functii.salariu_min%type, p_sal_max functii.salariu_max%type);
+procedure rename_func(p_id functii.id_functie%type, new_name functii.denumire_functie%type);
+procedure del_func(p_id functii.id_functie%type);
+end;
+/
+create or replace package body functii_pkg
+is
+    function ex_func(p_id functii.id_functie%type) return boolean
+    is
+    v_id functii.id_functie%type;
+    begin
+        select 'AD_PRES' into v_id from functii where id_functie = p_id;
+        return true;
+        exception
+            when no_data_found then
+                return false;
+    end;
+    procedure add_func(p_id functii.id_functie%type, p_den functii.denumire_functie%type, p_sal_min functii.salariu_min%type, p_sal_max functii.salariu_max%type)
+    is
+    exception e1;
+    begin
+        if ex_func(p_id) then
+            raise e1;
+        end if;
+        insert into functii values (p_id, p_den, p_sal_min, p_sal_max);
+        exception
+            when e1 then
+                dbms_output.put_line('Functia exista deja');
+    end;
+    procedure rename_func(p_id functii.id_functie%type, new_name functii.denumire_functie%type)
+    is
+    exception e1;
+    begin
+        if ex_func(p_id) = false then
+            raise e1;
+        end if;
+        update functii set denumire_functie = new_name where id_functie = p_id;
+        exception
+            when e1 then
+                dbms_output.put_line('Functia nu exista!');
+    end;
+    procedure del_func(p_id functii.id_functie%type)
+    is
+    exception e1;
+    begin
+        if ex_funct(p_id) = false then
+            raise e1;
+        end if;
+        delete from functii where id_functie = p_id;
+        exception
+            when e1 then
+            dbms_output.put_line('Functia nu exista!');
+    end;
+end;

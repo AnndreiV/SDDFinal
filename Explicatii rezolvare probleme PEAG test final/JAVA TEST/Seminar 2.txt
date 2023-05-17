@@ -1,0 +1,63 @@
+-- set serveroutput on;
+-- 1. Sa se creeze tabela Ang, care sa preia campurile id, nume, prenume, salariul, comision, data_angajare din tabela Angajati.
+
+begin
+    execute immediate 'create table Ang as select id_angajat, nume, prenume, salariul, comision, data_angajare from angajati';
+end;
+/
+describe ang;
+
+-- 2. Sa se adauge un nou angajat in tabela anterioara, folosind tastatura pentru datele de intrare.
+
+declare
+    v_id ang.id_angajat%type := &id_ang;
+    v_nume ang.nume%type := '&nume_ang';
+    v_salariul ang.salariul%type := &salariu;
+begin
+    insert into ang(id_angajat, nume, salariul) values (v_id, v_nume, v_salariul);
+end;
+/
+select * from ang order by id_angajat;
+
+-- 3. Adaugati o noua coloana 'Email' in tabela Ang. Folositi o variabila locala.
+
+declare
+    v_text varchar2(200);
+begin
+    v_text := 'alter table ang add (email varchar2(20))';
+    execute immediate v_text;
+end;
+/
+desc ang;
+
+-- 4. Sa se mareasca cu 20% salariul unui angajat al carui id este citit de la tastatura.
+
+declare
+    v_id ang.id_angajat%type := &idang;
+    v_salariul ang.salariul%type;
+begin
+    select salariul into v_salariul from ang where id_angajat = v_id;
+    dbms_output.put_line('Salariul inainte este '||v_salariul);
+    update ang set salariul = 1.2*salariul where id_angajat = v_id;
+    select salariul into v_salariul from ang where id_angajat = v_id;
+    dbms_output.put_line('Salariul dupa este '||v_salariul);
+end;
+
+-- 5. Folosind o variabila globala, preluati si afisati preluati si afisati salariul unui angajat al carui id il citim de la tastatura. 
+-- In continuare realizati un alt bloc PL/SQL prin care sa afisam numele angajatului cu salariul respectiv.
+
+variable v_salariul number;
+
+<<bloc>>
+declare
+    v_id ang.id_angajat%type := &id_ang;
+begin
+    select salariul into :v_salariul from ang where id_angajat  = v_id;
+    dbms_output.put_line('Salariul este '||:v_salariul);
+    declare
+        v_nume ang.nume%type;
+    begin
+        select nume into v_nume from ang where id_angajat = bloc.v_id;
+        dbms_output.put_line('Numele angajatului cu salariul '||:v_salariul||' este '||v_nume);
+    end;
+end;

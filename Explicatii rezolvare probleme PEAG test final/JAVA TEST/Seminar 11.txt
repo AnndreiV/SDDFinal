@@ -1,0 +1,52 @@
+1. Sa se realizeze un trigger care sa nu permita valori negative ale salariului angajatilor.
+
+create or replace trigger non_negative_salaries
+before insert or update of salariul on angajati
+for each row
+begin
+    if :new.salariul < 0 then
+        raise_application_error(-20001, 'Nu poti introduce salariul negativ');
+    end if;
+end;
+
+2. Sa se creeze o tabela TEMP_LOG care sa fie populata la operaţiile de INSERT, DELETE sau UPDATE pe tabela Produse, cu tipul operaţiei, utilizatorul care a executat-o, data curentă.
+
+create table temp_log(
+tip_operatie char(6),
+utilizator varchar2(20),
+data_operatie date
+);
+
+create or replace trigger produse_log_trg
+after insert or update or delete on produse
+begin
+    if inserting then
+        insert into temp_log values('INSERT', user, sysdate);
+    elsif updating then
+        insert into temp_log values('UPDATE', user, sysdate);
+    elsif deleting then
+        insert into temp_log values('DELETE', user, sysdate);
+    end if;
+end;
+
+3. Să se adauge în tabela Produse coloana Stoc. Să se introducă valoarea 2000 în coloana nou adăugată. Să se creeze un trigger care să nu permită comandarea unui produs în cantitate mai mare decât stocul aferent. Totodată, pentru produsele comandate, prin trigger se va diminua stocul cu valoarea comandată. Să se verifice declanșatorul.
+
+alter table produse add stocuri number; -- alter table produse add stocuri number default 2000;
+update produse set stocuri = 2000 where 1=1;
+
+
+create or replace trigger verify_stock_trg
+before insert or update of cantitate on rand_comenzi
+for each row
+declare
+v_stoc number;
+begin
+    select stocuri into stoc from produse where id_produs = :new.id_produs;
+    if :new.cantitate > stoc then
+        raise_application_error(-20002, 'Nu exista stoc disponibil');
+    elsif inserting then
+        update produse set stocuri = stocuri - :new.cantitate where id_produs = :new.id_produs;
+    elsif updateing then
+	  update produse set stocuri = stocuri + :old.cantitate - :new.cantitate where id_produs=:new.id_produs;
+    end if;
+end;

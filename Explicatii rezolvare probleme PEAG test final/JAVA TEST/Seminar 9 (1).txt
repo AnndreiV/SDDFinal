@@ -1,0 +1,94 @@
+1.      Realizaţi o procedură afiseaza_angajati în care să declaraţi un cursor pentru a selecta numele, funcţia şi data angajării salariaţilor din tabela Angajaţi. Parcurgeţi fiecare rând al cursorului şi, în cazul în care data angajării depăşeşte 01-AUG-2010, afişaţi informaţiile preluate. Apelaţi procedura.
+
+create or replace procedure afiseaza_angajati
+is
+cursor c1 is select nume, id_functie, data_angajare from angajati;
+begin
+    for row in c1 loop
+        if row.data_angajare > to_date('01-08-2010', 'dd-mm-yyyy') then
+            dbms_output.put_line(row.nume||' '||row.id_functie||' '||row.data_angajare);
+        end if;
+    end loop;
+end;
+/
+begin
+    afiseaza_angajati;
+end;
+
+2.      Realizaţi o funcţie vechime_angajat (p_cod angajati.id_angajat%type) care să returneze vechimea angajatului (calculată drept diferenţă între data actuală şi cea a angajării) care are codul primit ca parametru. Trataţi excepţiile apărute. Apelaţi funcţia dintr-un bloc PL/SQL şi utilizaţi un cursor pentru a parcurge toţi angajaţii.
+
+create or replace function vechime_angajat(p_cod angajati.id_angajat%type)
+return number
+is
+data_ang angajati.data_angajare%type;
+begin
+    select data_angajare into data_ang from angajati where id_angajat = p_cod;
+    return floor((sysdate-data_ang)/365);
+    exception
+        when no_data_found then
+            return 0;
+end;
+/
+declare
+rez number;
+id_ang number := &id;
+begin
+    select vechime_angajat(id_ang) into rez from dual;
+    if rez = 0 then
+        dbms_output.put_line('Nu exista angajat cu ID '||id_ang||'.');
+    else
+        dbms_output.put_line('Angajatul cu ID '||id_ang||' are o vechime de '||rez||' ani.');
+    end if;
+end;
+
+3.      Realizaţi o procedură vechime_angajat_proc (p_cod  IN angajati.id_angajat %type, p_vechime OUT number) care să calculeze vechimea angajatului care are codul primit ca parametru. Trataţi excepţiile apărute. Apelaţi procedura dintr-un bloc PL/SQL şi utilizaţi un cursor pentru a parcurge toţi angajaţii.
+
+create or replace procedure vechime_angajat_proc(p_cod IN angajati.id_angajat%type, p_vechime OUT number)
+is
+begin
+    p_vechime := vechime_angajat(p_cod);
+end;
+/
+declare
+cursor c1 is select id_angajat from angajati;
+v_vechime number;
+begin
+    for row in c1 loop
+        vechime_angajat_proc(row.id_angajat, v_vechime);
+        dbms_output.put_line('Angajatul cu ID '||row.id_angajat||' are o vechime de '||v_vechime||' ani.');
+    end loop;
+end;
+
+4.      Realizaţi o procedură vechime_angajat_proc2 care să calculeze vechimea fiecărui angajat (înregistrările se vor parcurge printr-un cursor). Trataţi excepţiile apărute. Testaţi procedura.
+
+create or replace procedure vechime_angajat_proc2
+is
+cursor c1 is select id_angajat from angajati;
+v_vechime number;
+begin
+    for row in c1 loop
+        vechime_angajat_proc(row.id_angajat, v_vechime);
+    end loop;
+end;
+/
+begin
+    vechime_angajat_proc2;
+end;
+
+5.      Realizaţi o procedură prin care să se returneze data încheierii şi valoarea celei mai recente comenzi: info_comanda_recenta (p_data OUT comenzi.data%type, p_valoare OUT number)
+
+create or replace procedure info_comanda_recenta(p_data out comenzi.data%type, p_valoare out number)
+is
+v_id comenzi.id_comanda%type;
+begin
+    select data, id_comanda into p_data, v_id from comenzi order by data desc fetch first row only;
+    select sum(rc.pret*rc.cantitate) into p_valoare from comenzi c, rand_comenzi rc where c.id_comanda = rc.id_comanda and c.id_comanda = v_id;
+end;
+/
+declare
+v_data comenzi.data%type;
+p_valoare number;
+begin
+    info_comanda_recenta(v_data, p_valoare);
+    dbms_output.put_line(p_valoare);
+end;

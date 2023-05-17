@@ -1,0 +1,77 @@
+1. Realizati o procedura PL/SQL prin intermediul careia sa mariti cu 20% salariul angajatilor comisionati, care au intermediat minim 3 comenzi intr-un an transmis ca parametru. Returnati numarul de angajati pentru care se realizeaza aceasta actualizare, sau tratati in mod corespunzator o exceptie daca nu exista nici un angajat pentru care se modifica salariul. Apelati procedura si afisati numarul de angajati carora li s-a modificat salariul.
+
+create or replace procedure cerinta_1(an in number, nr_ang out number)
+is
+no_data exception;
+begin
+    update angajati set salariul = 1.2*salariul where id_angajat in 
+    (select distinct c.id_angajat from comenzi c, angajati a where a.id_angajat = c.id_angajat and a.comision is not null and extract(year from c.data)=an 
+    having count(c.id_comanda)>=3 group by c.id_angajat);
+    if sql%notfound then
+        raise no_data;
+    else
+        nr_ang := sql%rowcount;
+    end if;
+    dbms_output.put_line('Salariul a '||nr_ang||' angajati a fost modificat.');
+    exception
+    when no_data then
+        dbms_output.put_line('Nu exista angajati care sa fi intermediat comenzi in anul '||an);
+        nr_ang := 0;
+end;
+
+declare
+v_nr_ang number;
+begin
+	cerinta_1(&an, v_nr_ang);
+	if v_nr_ang != 0 then
+		dbms_output.put_line('Salariul a '||v_nr_ang||' a fost modificat');
+	else
+		dbms_output.put_line('Nu exista angajati in anul trimis ca parametru care sa fi intermediat cel putin 3 comenzi');
+	end if;
+end;
+
+2. Realizati o functie PL/SQL care sa returneze categoria in care se incadreaza un angajat al carui id este transmis ca parametru. Angajatii cu salariul mai mic de 3000 sunt in categoria 'junior', cei cu salariul intre 3000 and 7000 'mid-level;, iar cei cu salariul peste 7000 sunt incadrati la 'senior'. Tratati exceptia care apare daca angajatul pentru care se face verificarea nu exista (returnam un mesaj corespunzator).
+
+create or replace function cerinta_2(id_ang in angajati.id_angajat%type)
+return varchar2
+is
+	--v_id_ang angajati.id_angajat%type;
+	v_salariul angajati.salariul%type;
+begin
+	--select id_angajat into v_id_ang from angajati where id_angajat = id_ang;
+	select salariul into v_salariul from angajati where id_angajat = v_id_ang;
+	case 
+	when v_salariul < 3000 then
+		return 'junior';
+	when v_salariul between 3000 and 7000 then
+		return 'mid-level';
+	when v_salariul > 7000 then
+		return 'senior';
+	end case;
+exception
+	when no_data_found then
+		return 'Angajatul cu ID-ul '||id_ang||' nu exista.';
+end;
+
+
+begin
+	dbms_output.put_line(cerinta_2(&id));
+end;
+
+3. Realizati o functie PL/SQL care sa returneze numele complet al angajatului dat ca parametru.
+
+create or replace function cerinta_3(id_ang in angajati.id_angajat%type)
+return varchar2
+is
+v_nume varchar2(100);
+begin
+    select prenume||' '||nume into v_nume from angajati where id_angajat = id_ang;
+    return v_nume;
+exception
+    when no_data_found then
+        return 'Angajatul cu ID-ul '||id_ang||' nu exista.';
+end;
+
+begin
+	dbms_output.put_line(cerinta_3(&id));
+end;

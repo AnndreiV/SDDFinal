@@ -1,0 +1,99 @@
+/*
+1. Afisați numele, funcția si data angajarii pentru acei angajati care au intrat în firmă într-un anumit an, citit de la tastatură. 
+
+În cazul în care nu există nici un astfel de angajat tratați excepția și afișați mesajul ‘In anul  YYYY nu a fost angajat personal nou’
+
+În cazul în care interogarea returnează mai multe valori tratați excepția și afișați mesajul In anul  YYYY au fost angajate multiple persoane’
+
+Tratați orice altă problemă și afișați mesajul ‘A aparut o altă problemă’ 
+*/
+
+declare
+    v_nume angajati.nume%type;
+    v_functie angajati.id_functie%type;
+    v_data angajati.data_angajare%type;
+    v_an number := &an;
+begin
+    select nume, id_functie, data_angajare into v_nume, v_functie, v_data from angajati where v_an = extract (year from data_angajare);
+    dbms_output.put_line('În anul '|| v_an || ' a fost angajat ' || v_nume || ' avand functia ' || v_functie || ' si fiind angajat la ' || to_char(v_data, 'DD FMMonth, YYYY') || '.');
+exception
+    when no_data_found then
+        dbms_output.put_line('În anul '||v_an||' nu a fost angajat personal nou.');
+    when too_many_rows then
+        dbms_output.put_line('În anul '||v_an||' au fost angajate multiple persoane.');
+    when others then
+        dbms_output.put_line('A apărut o altă problemă.');
+end;
+
+
+/*2. Adăugați în tabela departamente un nou departament cu ID-ul 300, fără a preciza denumirea acestuia. 
+În acest caz va aparea o eroare cu codul ORA-02290 prin care suntem avertizați de încălcarea unei restricţii de integritate. 
+Tratați această situație afisand un mesaj corespunzator, precum si mesajul erorii generate:*/
+
+alter session set nls_language = 'romanian';
+declare
+    dept_except exception;
+    pragma exception_init(dept_except, -2290);
+begin
+    insert into departamente(id_departament, denumire_departament) values (300, null);
+exception
+    when dept_except then
+        dbms_output.put_line('Nu ati dat informatii complete');
+        dbms_output.put_line('Codul erorii '||sqlcode||' cu mesajul '||sqlerrm);
+end;
+
+/*3. Acordați o mărire salarială de 30 de procente unui angajat al cărui id il cititi de la tastatura si afisati un mesaj de confirmare. 
+Tratați cu ajutorul unei excepții situația în care acest angajat nu există, afișând un mesaj corespunzător */
+
+declare
+    ang_except exception;
+    v_id angajati.id_angajat%type := &id;
+begin
+    update angajati set salariul = salariul * 1.30 where id_angajat = v_id;
+    if sql%found then
+        dbms_output.put_line('Angajatului cu id-ul '||v_id||' i s-a crescut salariul cu 30%');
+    else
+        raise ang_except;
+    end if;
+exception
+    when ang_except then
+        dbms_output.put_line('Angajatul cu id-ul '||v_id||' nu a fost gasit in BD.');
+end;
+
+/*4.  Intr-un bloc PL/SQL afisati numele unui angajat, al carui id este citit de la tastatura. 
+De asemenea, calculați numarul de comenzi gestionate de catre angajatul respectiv. 
+Afisati numele angajatului , iar daca acesta exista și s-a ocupat de comenzi, afișați numarul acestora. 
+Dacă angajatul nu există, tratați excepția cu o rutină de tratare corespunzătoare, 
+iar dacă angajatul nu s-a ocupat de nici o comandă, invocați o excepție, care se va trata corespunzător. 
+Tratați orice altă excepție cu o rutină de tratare corespunzătoare.*/
+
+declare
+    v_id angajati.id_angajat%type := &id;
+    v_nume angajati.nume%type;
+    v_nrc pls_integer;
+    no_orders exception;
+begin
+    
+    begin
+    select nume into v_nume from angajati where id_angajat = v_id;
+    end;
+    
+    if v_nume is not null then
+        begin
+            select count(id_angajat) into v_nrc from comenzi where id_angajat = v_id;
+            if v_nrc = 0 then
+                raise no_orders;
+            end if;
+        end;
+    end if;
+    
+    dbms_output.put_line('Angajatul '||v_id||' a intermediat '||v_nrc||' comenzi.'); 
+    
+    exception
+        when no_orders then
+            dbms_output.put_line('Angajatul '||v_id||' nu a intermediat comenzi.');
+        when no_data_found then
+            dbms_output.put_line('Nu exista angajat cu id-ul '||v_id||'.');
+	  when others then
+		dbms_output.put_line('Eroare! > '||SQLERRM);
+end;

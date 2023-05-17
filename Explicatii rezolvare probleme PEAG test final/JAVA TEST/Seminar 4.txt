@@ -1,0 +1,65 @@
+CERINȚE:
+
+1. Să se șteargă din tabela comenzi toate comenzile plasate într-o modalitate introdusă prin intermediul unei variabile de substituție. Afișați numărul de comenzi care au fost șterse folosind o variabilă de mediu.
+
+accept g_modalitate prompt 'Introduceti modalitatea de plasare a comenzii'
+variable g_nrsters varchar2(100);
+
+begin
+    delete from comenzi where modalitate = '&g_modalitate';
+    :g_nrsters := to_char(sql%rowcount)||' comenzi sterse';
+end;
+/
+print g_nrsters
+rollback
+
+
+2. Să se afişeze primele 3 comenzi care au cele mai multe produse comandate. În acest caz înregistrările vor fi ordonate descrescător în funcţie de numărul produselor comandate.
+
+declare
+cursor c_comenzi is select c.id_comanda, count(id_produs) nr_produse from comenzi c, rand_comenzi rc where c.id_comanda = rc.id_comanda group by c.id_comanda order by nr_produse desc;
+vrec_comenzi c_comenzi%rowtype;
+begin 
+if not c_comenzi%isopen then
+    open c_comenzi;
+end if;
+loop
+    fetch c_comenzi into vrec_comenzi;
+    dbms_output.put_line('ID comanda: '||vrec_comenzi.id_comanda||' Nr. produse '||vrec_comenzi.nr_produse);
+    exit when c_comenzi%rowcount = 3 or c_comenzi%notfound;
+end loop;
+end;
+
+3. Utilizați un bloc PL/SQL pentru a afișa pentru fiecare departament (id, denumire) valoarea totală a salariilor platite angajaților.
+
+declare
+cursor c1 is select d.id_departament, d.denumire_departament, sum(a.salariul) total from departamente d, angajati a where a.id_departament = d.id_departament group by d.id_departament, d.denumire_departament;
+begin
+    for rec in c1 loop
+        dbms_output.put_line('ID Departament: '||rec.id_departament||', Denumire Departament: '||rec.denumire_departament||' Salariul total: '||rec.total);
+    end loop;
+end;
+
+4. Realizați un bloc PL/SQL care sa afișeze informații despre angajați și numărul de comenzi intermediat de aceștia
+
+declare
+cursor c1 is select a.nume, count(c.id_comanda) nrc from angajati a, comenzi c where a.id_angajat = c.id_angajat group by a.nume;
+begin
+    for ang in c1 loop
+    dbms_output.put_line('Angajatul '||ang.nume||' a intermediat '||ang.nrc||' comenzi.');
+    end loop;
+end;
+
+5. Să se creeze un bloc PL/SQL prin care să se afișeze pentru fiecare angajat ( id, nume) detalii cu privire la comenzile intermediate de către acesta.
+
+declare
+cursor c_angajat is select id_angajat, nume from angajati where id_angajat in (select id_angajat from comenzi where id_angajat is not null);
+cursor c_comenzi(id angajati.id_angajat%type) is select id_comanda, data, modalitate from comenzi where id_angajat = id; 
+begin
+    for rec in c_angajat loop
+    dbms_output.put_line('Angajatul '||rec.nume||' a intermediat urmatoarele comenzi:');
+    for rec2 in c_comenzi(rec.id_angajat) loop
+    dbms_output.put_line('ID comanda '||rec2.id_comanda||' data: '||rec2.data||' modalitate: '||rec2.modalitate);
+    end loop;
+    end loop;
+end;
